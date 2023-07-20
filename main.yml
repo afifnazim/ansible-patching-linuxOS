@@ -1,0 +1,35 @@
+---
+- name: Updating all packages on CentOS/ RHEL Linux Servers
+  hosts: ansible_clients
+  become: true
+  become_user: root
+  tasks:
+    - name: Update yum repo and package cache
+      yum:
+        name: "*"
+        state: latest
+        update_cache: yes
+
+    #- name: Check if a reboot is needed on all servers
+       #register: reboot_required_file_existence
+       #stat: path=/var/run/reboot-required get_md5=no
+
+    - name: Reboot servers if kernel is updated
+      reboot:
+        msg: "Rebooting the servers after applying Kernel Updates"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: uptime
+      #when: reboot_required_file_existence.stat.exists
+
+    - name: check if all the systems responding to ssh
+      local_action:
+        module: wait_for
+          host={{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}
+          port=22
+          search_regex=OpenSSH
+          delay=15
+          timeout=300
+          state=started
